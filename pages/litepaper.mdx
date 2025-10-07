@@ -1,0 +1,207 @@
+import { BlockMath, InlineMath } from "react-katex";
+import "katex/dist/katex.min.css";
+
+# Litepaper
+*Litepaper 0.1.0*
+
+---
+
+## Abstract
+
+TLD3 introduces a new way to trade domain derivatives by turning Web2 and Web3 domains into fractional ERC-20 tokens while proving ownership of the domains by DNS challenges and Doma Protocol’s Web3 domains.
+
+---
+
+## Introduction
+
+Tokenization has changed how assets are owned and traded, allowing them to be split, exchanged, and used in decentralized finance. Derivative trading on decentralized platforms has seen rapid growth, letting users speculate, hedge, or gain exposure without holding the full asset.
+
+However, this approach has its limitations. How can someone trade or speculate on an asset if ownership cannot be proven? That is why our philosophy for tokenization is based on verified ownership. TLD3 addresses this for domains. Each domain is converted into ERC-20 fraction tokens, allowing anyone to trade parts of a domain, speculate on its value, and participate in liquid markets.
+
+---
+
+## Economy
+
+### Mathematical Model
+
+The TLD3 pricing mechanism is based on bonding curve mathematics. That’s how domain fraction pricing is calculated based on sales and purchases.
+
+---
+
+## Symbols and State
+
+### Supply and Sold State
+
+- <InlineMath math={"N"} />: total supply of base units (minted to platform at creation)  
+- <InlineMath math={"s"} />: sold amount in base units (`fractionsSold`), with <InlineMath math={"0 \\\\le s \\\\le N"} />  
+- <InlineMath math={"r = s / N"} />: sold ratio
+
+### ETH Parameters and Balances
+
+- <InlineMath math={"E_0"} />: initial ETH parameter (`ethDeposited`) (wei), used as price anchor  
+- <InlineMath math={"B"} />: current ETH balance (wei) held by the DomainToken contract
+
+### Fees (Basis Points)
+
+- <InlineMath math={"f_p"} />: platform fee in bps  
+- <InlineMath math={"f_c"} />: creator fee in bps  
+- <InlineMath math={"f = f_p + f_c \\\\le 500"} /> (combined cap: 5%)
+
+### Units
+
+Token uses 18 decimals; 1 token unit equals:
+
+<BlockMath math={"1 \\text{ token unit } = 10^{18} \\text{ base units}"} />
+
+---
+
+## Quadratic Spot Price
+
+The on-chain spot price per token unit is quadratic in the sold ratio <InlineMath math={"r"} />.
+
+**Base (per base unit) anchor price:**
+
+<BlockMath math={"p_0 = \\frac{E_0}{N} \\quad \\text{(wei per base unit)}"} />
+
+**Spot price per base unit at sold state <InlineMath math={"s"} />:**
+
+<BlockMath math={"p_{\\mathrm{bu}}(s) = p_0 (1 + r)^2 = \\frac{E_0}{N} \\left(1 + \\frac{s}{N} \\right)^2"} />
+
+**Spot price per 1 token unit (<InlineMath math={"10^{18}"} /> base units):**
+
+<BlockMath math={"P(s) = p_{\\mathrm{bu}}(s) 10^{18} = \\frac{E_0 10^{18}}{N} \\left(1 + \\frac{s}{N} \\right)^2"} />
+
+**Monotonicity:**  
+<InlineMath math={"P(s)"} /> increases with <InlineMath math={"s"} />;  
+<InlineMath math={"P(0) = \\frac{E_0 10^{18}}{N}"} />.
+
+---
+
+## Primary Buy Execution
+
+Given an ETH input of <InlineMath math={"X"} /> wei and pre-trade state <InlineMath math={"s"} />:
+
+1. Compute spot price <InlineMath math={"P(s)"} />  
+2. Compute purchasable base units (flooring):  
+
+<BlockMath math={"a = \\left\\lfloor \\frac{X 10^{18}}{P(s)} \\right\\rfloor"} />
+
+3. Cap by platform inventory <InlineMath math={"I"} />:
+
+<BlockMath math={"a \\leftarrow \\min\\{a, I\\}"} />
+
+4. Exact ETH spent (wei):
+
+<BlockMath math={"\\mathrm{cost} = \\left\\lfloor \\frac{a P(s)}{10^{18}} \\right\\rfloor"} />
+
+5. Token transfer fees (in base units):
+
+<BlockMath math={"\\mathrm{fee}_p = \\left\\lfloor \\frac{a f_p}{10{,}000} \\right\\rfloor, \\quad \\mathrm{fee}_c = \\left\\lfloor \\frac{a f_c}{10{,}000} \\right\\rfloor, \\quad a_{\\mathrm{net}} = a - \\mathrm{fee}_p - \\mathrm{fee}_c"} />
+
+6. **Transfers:**
+
+- Token: platform → buyer <InlineMath math={"a_{\\mathrm{net}}"} />; platform → creator <InlineMath math={"\\mathrm{fee}_c"} />. Platform fee on buys is a self-transfer; net platform outflow equals <InlineMath math={"a - \\mathrm{fee}_p"} />.  
+- ETH: buyer → creator <InlineMath math={"\\mathrm{cost}"} />; refund to buyer <InlineMath math={"X - \\mathrm{cost}"} />.
+
+7. **State update:**
+
+<BlockMath math={"s' = s + a"} />
+
+*Notes:* The entire buy executes at the pre-trade spot price <InlineMath math={"P(s)"} />; there is no intra-trade slippage integration.
+
+---
+
+## Secondary Sell Execution
+
+Given a user sells <InlineMath math={"a"} /> base units at pre-trade state <InlineMath math={"s"} />:
+
+1. Compute spot price <InlineMath math={"P(s)"} />  
+2. Token fees and returned amount:
+
+<BlockMath math={"\\mathrm{fee}_p = \\left\\lfloor \\frac{a f_p}{10{,}000} \\right\\rfloor, \\quad \\mathrm{fee}_c = \\left\\lfloor \\frac{a f_c}{10{,}000} \\right\\rfloor, \\quad a_{\\mathrm{ret}} = a - \\mathrm{fee}_p - \\mathrm{fee}_c"} />
+
+3. Circulation constraint:
+
+<BlockMath math={"a_{\\mathrm{ret}} \\le s"} />
+
+4. ETH payout (wei) from the DomainToken contract:
+
+<BlockMath math={"\\mathrm{payout} = \\left\\lfloor \\frac{a_{\\mathrm{ret}} P(s)}{10^{18}} \\right\\rfloor"} />
+
+Require <InlineMath math={"B \\ge \\mathrm{payout}"} />.
+
+5. **Transfers:**
+
+- Token: seller → platform <InlineMath math={"\\mathrm{fee}_p"} /> and <InlineMath math={"a_{\\mathrm{ret}}"} />; seller → creator <InlineMath math={"\\mathrm{fee}_c"} />.  
+- ETH: DomainToken → seller <InlineMath math={"\\mathrm{payout}"} />.
+
+6. **State update:**
+
+<BlockMath math={"s' = s - a_{\\mathrm{ret}}"} />
+
+---
+
+## Fees and Exemptions
+
+- Fees apply on token transfers unless either party is fee-exempt.  
+- Combined fee cap: <InlineMath math={"f \\le 500"} /> bps.  
+- **Destinations:**
+  - Platform receives <InlineMath math={"\\mathrm{fee}_p"} /> on sells; on buys, platform fee is a self-transfer.  
+  - Creator receives <InlineMath math={"\\mathrm{fee}_c"} /> on both buys and sells (in tokens) and receives primary sale ETH.
+
+---
+
+## Liquidity and Solvency Constraints
+
+- Inventory constraint on buys: <InlineMath math={"a \\le I"} />  
+- Circulation bound on sells: <InlineMath math={"a_{\\mathrm{ret}} \\le s"} />  
+- ETH solvency for sells:
+
+<BlockMath math={"B \\ge \\left\\lfloor \\frac{a_{\\mathrm{ret}} P(s)}{10^{18}} \\right\\rfloor"} />
+
+- Primary sale ETH (<InlineMath math={"\\mathrm{cost}"} />) is paid to the creator and does not automatically fund <InlineMath math={"B"} />.
+
+---
+
+## Properties and Implications
+
+- **Single-price execution:**  
+  Large trades pay/receive the pre-trade spot price. Compared to slippage-integrated bonding curves, large buys are cheaper and large sells are richer.  
+
+- **Funding gap risk:**  
+  Because primary sale ETH flows to the creator while sells pay from <InlineMath math={"B"} />, sustained sell pressure can render sells infeasible.  
+
+- **State accounting:**  
+  Buys increase <InlineMath math={"s"} /> by <InlineMath math={"a"} />; sells decrease <InlineMath math={"s"} /> by <InlineMath math={"a_{\\mathrm{ret}}"} />.
+
+---
+
+## Parameterization and Tuning
+
+- Supply <InlineMath math={"N"} /> and anchor <InlineMath math={"E_0"} /> set the initial scale:
+
+<BlockMath math={"P(0) = \\frac{E_0 10^{18}}{N}"} />
+
+- Fee policy <InlineMath math={"(f_p, f_c)"} /> trades off friction vs. accrual (bounded by 5%).  
+- Liquidity <InlineMath math={"B"} /> should match anticipated redemption volume.
+
+---
+
+## Core Equations (Summary)
+
+<BlockMath math={"P(s) = \\frac{E_0 10^{18}}{N} \\left(1 + \\frac{s}{N} \\right)^2"} />
+
+<BlockMath math={"a = \\left\\lfloor \\frac{X 10^{18}}{P(s)} \\right\\rfloor, \\quad \\mathrm{cost} = \\left\\lfloor \\frac{a P(s)}{10^{18}} \\right\\rfloor, \\quad s' = s + a"} />
+
+<BlockMath math={"a_{\\mathrm{ret}} = a \\left(1 - \\frac{f}{10{,}000} \\right), \\quad \\mathrm{payout} = \\left\\lfloor \\frac{a_{\\mathrm{ret}} P(s)}{10^{18}} \\right\\rfloor, \\quad s' = s - a_{\\mathrm{ret}}"} />
+
+---
+
+## Technical Overview
+
+### Smart Contracts
+
+The TLD3 platform is built on **Doma Testnet**.
+
+- **Tradable.sol:**  
+  [0xb6BA8806f72F32a028BFECABeE664212F5c483eF](https://explorer-testnet.doma.xyz/address/0xb6BA8806f72F32a028BFECABeE664212F5c483eF)

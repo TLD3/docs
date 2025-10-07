@@ -1,0 +1,42 @@
+# Idea Behind TLD3
+
+The idea is simple:
+
+- Prove ownership of your domains
+- Mint them to earn passive income
+- Place buy & sell options on tokenized domains
+
+But how do we prove ownership?
+
+### Ownership
+
+First, we have to understand the difference of `Web2` and `Web3` domains. We use the term Web2 domains as the traditional domains, like *dorahacks.io*, *example.com*, etc. When we use the term Web3 domains, we mean the minted domains on Doma Protocol, where users can trade their domains as crypto assets.
+
+Web3 domain validation is easy. [Doma Protocol's Subgraph](https://docs.doma.xyz/api-reference/doma-multi-chain-subgraph) GraphQL API provides methods to fetch which wallet has which domains.
+
+![Screenshot 2025-10-04 013039.png](https://cdn.dorahacks.io/static/files/199ac6a09dc50f3ce6e2ca0497181b23.png)
+
+Web2 domain validation is a little bit more complicated for users, requires DNS challenges. I think that's the beauty of Web3...
+
+### Tokenization
+
+In TLD3, users tokenize their Web2 or Web3 domains. Since Web3 domains are already tokenized on Doma Protocol, we can call this de-tokenization in some sense. This is an abstraction layer, which we want to remove later and fully inherit Doma features.
+
+These tokenized domains are instantly listed in TLD3 derivative market, waiting for people to buy & sell these assets.
+
+![Screenshot 2025-10-04 013125.png](https://cdn.dorahacks.io/static/files/199ac6aaee913e92f11ddc14e9083ccc.png)
+
+It may change by owner's smart contract calls, but by default, a domain is split into a million fractions, and worth 0.1 ETH when first tokenized.
+
+```solidity
+uint256 public totalFractions = 1_000_000;
+uint256 public ethDeposited = 0.1 ether;
+```
+
+Then the price changes on the contract, after buy & sell actions. Everything is transparent and open.
+
+![Screenshot 2025-10-04 014750.png](https://cdn.dorahacks.io/static/files/199ac79ec2f041501dee5e643b29c6c4.png)
+
+Note that, to tokenize a domain, you must verify the ownership, set a ticker, and pay the minimum ETH deposit amount. There is a deposit amount because otherwise, it would be extremely easy to spam the domains into the derivative market without a risk factor. The risk here is depositing ETH and trying to earn it back via trading fees.
+
+Trading fees can also be changed by the contract owner; however, by default, we set fees at 1% for the platform, 1% for the domain owner.

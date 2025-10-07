@@ -1,15 +1,12 @@
 {
   "index": "Introduction",
-  "another": "Another Page",
-  "advanced": "Advanced (A Folder)",
-  "about": {
-    "title": "About",
-    "type": "page"
-  },
+  "idea": "Idea",
+  "litepaper": "Litepaper",
+  "roadmap": "Roadmap",
   "contact": {
-    "title": "Contact ↗",
+    "title": "App ↗",
     "type": "page",
-    "href": "https://twitter.com/shuding_",
+    "href": "https://tld3.app",
     "newWindow": true
   }
 }
